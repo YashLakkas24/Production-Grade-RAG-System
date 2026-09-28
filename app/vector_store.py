@@ -1,5 +1,23 @@
-import numpy as np
-import faiss
+import os
+
+import psycopg
+from dotenv import load_dotenv
+from pgvector.psycopg import register_vector
+
+load_dotenv(override=True)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+
+def get_connection():
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL is not configured.")
+
+    conn = psycopg.connec(DATABASE_URL)
+
+    register_vector(conn)
+
+    return conn
+
 
 # Global storage for FAISS index and chunk metadata
 vector_index = None

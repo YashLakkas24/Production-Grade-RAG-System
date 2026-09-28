@@ -13,7 +13,7 @@ def generate_answer(question: str, relevant_chunks: list[dict]) -> str:
         return "I could not find relevant information in the uploaded documents."
 
     context = "\n\n".join(
-        f"Source:{chunk['source']}|"
+        f"Source:{chunk['source']} |"
         f"Pages:{chunk['page_numbers']}\n"
         f"{chunk['text']}"
         for chunk in relevant_chunks
