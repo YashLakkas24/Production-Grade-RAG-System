@@ -2,6 +2,7 @@ import os
 
 import psycopg
 from dotenv import load_dotenv
+from pgvector import Vector
 from pgvector.psycopg import register_vector
 
 load_dotenv(override=True)
@@ -12,30 +13,49 @@ def get_connection():
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL is not configured.")
 
-    conn = psycopg.connec(DATABASE_URL)
+    conn = psycopg.connect(DATABASE_URL, connect_timeout=5)
 
     register_vector(conn)
 
     return conn
 
 
-# Global storage for FAISS index and chunk metadata
-vector_index = None
-stored_chunks = []
-
-
 def store_chunks(chunks: list[dict], embeddings: list[list[float]]):
-    global vector_index, stored_chunks
+    if len(chunks) != len(embeddings):
+        raise ValueError("Number of chunks and embeddings must be the same.")
 
-    stored_chunks = chunks
-    embeddings_np = np.array(embeddings).astype("float32")
+    if not chunks:
+        return {"chunks_stored": 0}
 
-    dimension = len(embeddings[0])
-    vector_index = faiss.IndexFlatL2(dimension)
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM chunks WHERE source = %s", (chunks[0]["source"],)
+            )
 
-    vector_index.add(embeddings_np)
-
-    return {"chunks_stored": len(chunks), "vector_count": vector_index.ntotal}
+            for chunk, embedding in zip(chunks, embeddings):
+                cursor.execute(
+                    """
+                    INSERT INTO chunks (
+                        source,
+                        text,
+                        page_numbers,
+                        start_offset,
+                        end_offset,
+                        embedding
+                    )
+                    VALUES (%s,%s,%s,%s,%s,%s)
+                """,
+                    (
+                        chunk["source"],
+                        chunk["text"],
+                        chunk["page_numbers"],
+                        chunk["start"],
+                        chunk["end"],
+                        Vector(embedding),
+                    ),
+                )
+    return {"chunks_stored": len(chunks)}
 
 
 def search_similar(query_embedding: list[float], k: int = 3) -> list[dict]:
