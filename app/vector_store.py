@@ -60,22 +60,55 @@ def store_chunks(chunks: list[dict], embeddings: list[list[float]]):
 
 def search_similar(query_embedding: list[float], k: int = 3) -> list[dict]:
 
-    if vector_index is None or vector_index.ntotal == 0:
+    if k <= 0:
         return []
 
-    query_np = np.array([query_embedding]).astype("float32")
+    query_vector = Vector(query_embedding)
 
-    k = min(k, vector_index.ntotal)
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT 
+                    id,
+                    source,
+                    text,
+                    page_numbers,
+                    start_offset,
+                    end_offset,
+                    embedding <=> %s AS cosine distance
+                FROM chunks
+                ORDER BY embedding <=>%s
+                LIMIT %s
+    """,
+                (query_vector, query_vector, k),
+            )
 
-    distances, indices = vector_index.search(query_np, k)
+            rows = cursor.fetchall()
 
     relevant_chunks = []
 
-    for distance, index in zip(distances[0], indices[0]):
-        if index != -1:
-            chunk = stored_chunks[index].copy()
+    for row in rows:
+        (
+            chunk_id,
+            source,
+            text,
+            page_numbers,
+            start_offset,
+            end_offset,
+            cosine_distance,
+        ) = row
 
-            chunk["distance"] = float(distance)
-            relevant_chunks.append(chunk)
+        relevant_chunks.append(
+            {
+                "id": chunk_id,
+                "source": source,
+                "text": text,
+                "page_numbers": page_numbers,
+                "start_offset": start_offset,
+                "end_offset": end_offset,
+                "cosine_distance": float(cosine_distance),
+            }
+        )
 
     return relevant_chunks
