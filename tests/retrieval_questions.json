@@ -1,0 +1,17 @@
+[
+  {
+    "question": "What is the stipend of the internship?",
+    "expected_source": "Data_Science.pdf",
+    "expected_pages": [7]
+  },
+  {
+    "question": "What is the project cost?",
+    "expected_source": "Data_Science.pdf",
+    "expected_pages": [7]
+  },
+  {
+    "question": "What is the training fee?",
+    "expected_source": "Data_Science.pdf",
+    "expected_pages": [7]
+  }
+]

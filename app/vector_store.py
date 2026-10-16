@@ -6,6 +6,7 @@ from pgvector import Vector
 from pgvector.psycopg import register_vector
 
 load_dotenv(override=True)
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
@@ -76,7 +77,7 @@ def search_similar(query_embedding: list[float], k: int = 3) -> list[dict]:
                     page_numbers,
                     start_offset,
                     end_offset,
-                    embedding <=> %s AS cosine distance
+                    embedding <=> %s AS cosine_distance
                 FROM chunks
                 ORDER BY embedding <=>%s
                 LIMIT %s
